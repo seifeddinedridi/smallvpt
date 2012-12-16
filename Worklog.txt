@@ -1,0 +1,10 @@
+10/10/2012:
+- Added basic single scattering integrator using direct light sampling.
+- Added a XORShift based random number generator.
+- Still working on getting a correct implementation of single scattering, rendering a Cornell box with a homogeneous medium is quite challenging.
+
+14/10/2012:
+- Added emission.
+
+17/11/2012
+- Reimplemented single scattering, it is slow and the result is not yet satisfying...
