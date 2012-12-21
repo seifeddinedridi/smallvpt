@@ -48,15 +48,8 @@ struct Sphere {
 	}
 };
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
-	Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),DIFF),//Left
-	Sphere(1e5, Vec(-1e5+99,40.8,81.6),Vec(),Vec(.25,.25,.75),DIFF),//Right
-	Sphere(1e5, Vec(50,40.8, 1e5),     Vec(),Vec(.75,.75,.75),DIFF),//Back
-	Sphere(1e5, Vec(50,40.8,-1e5+170), Vec(),Vec(),           DIFF),//Frnt
-	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
-	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
-	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
-	Sphere(16.5,Vec(73,46.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(600, Vec(50,681.6-.17,81.6),Vec(12,12,12),  Vec(), DIFF) //Lite
+	Sphere(16.5,Vec(50,46.5,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
+	Sphere(10, Vec(50,80,81.6),Vec(12,12,12),  Vec(), DIFF) //Lite
 };
 const int lightId = 8;
 struct HomogeneousMedium {
@@ -70,7 +63,7 @@ inline bool intersect(const Ray &r, double &t, int &id){
 	for(int i=int(n);i--;) if((d=spheres[i].intersect(r))&&d<t){t=d;id=i;}
 	return t<inf;
 }
-inline bool intersectP(const Ray &r, double t){
+inline bool intersectP(const Ray &r, double t) {
 	double n=sizeof(spheres)/sizeof(Sphere), d;
 	for(int i=int(n);i--;) if((d=spheres[i].intersect(r))&&d<t){return true;}
 	return false;
@@ -88,7 +81,7 @@ inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
 	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
 }
-Vec singleScatter(const Ray &r, double tmax) {
+inline Vec singleScatter(const Ray &r, double tmax) {
 	// Sample a point along the ray's extents
 	double s = sampleSegment(XORShift::frand(), medium.sigma_s, tmax);
 	Vec x = r.o + r.d * s;
@@ -99,7 +92,7 @@ Vec singleScatter(const Ray &r, double tmax) {
 		return spheres[lightId].e * exp(-medium.sigma_a * tLight) * (1.0 - exp(-medium.sigma_s * tmax));
 	return Vec();
 }
-float multipleScatter(const Ray &r, Ray *sRay, double tmax) {
+inline float multipleScatter(const Ray &r, Ray *sRay, double tmax) {
 	// Sample a point along the ray's extents
 	double s = sampleSegment(XORShift::frand(), medium.sigma_s, tmax);
 	Vec x = r.o + r.d * s;
@@ -137,7 +130,7 @@ Vec radiance(const Ray &r, int depth) {
 	float ms = multipleScatter(r, &sRay, t);
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
 	// Sample surface or volume?
-	if (XORShift::frand() <= 0.5f)
+	if (XORShift::frand() <= 0.5f && (n.dot(nl)>0)) // no scattering inside a dielectric
 	{
 		return radiance(sRay, depth) * ms * 2.0f;
 	}
@@ -164,7 +157,7 @@ Vec radiance(const Ray &r, int depth) {
 }
 int main(int argc, char *argv[]){
 	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,295.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,255.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++){                       // Loop over image rows
