@@ -5,3 +5,5 @@ smallvpt
 
 It currently includes basic volumetric light transport using single scattering and homogeneous media. On the future, 
 I plan to add full support of the Radiative Transfer Equation
+
+<img src="https://github.com/D-POWER/smallvpt/master/Renders/image - 0.01 sigma_s [2048spp].png"></img>
