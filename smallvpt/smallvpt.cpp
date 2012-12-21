@@ -55,14 +55,14 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
 	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
 	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
-	Sphere(16.5,Vec(73,16.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
+	Sphere(16.5,Vec(73,46.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
 	Sphere(600, Vec(50,681.6-.17,81.6),Vec(12,12,12),  Vec(), DIFF) //Lite
 };
 const int lightId = 8;
 struct HomogeneousMedium {
 	HomogeneousMedium(double sigs, double siga): sigma_s(sigs), sigma_a(siga), sigma_t(sigma_s + sigma_a) {}
 	double sigma_s, sigma_a, sigma_t;
-} medium(0.04, 0.001);
+} medium(0.04, 0.01);
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id){
@@ -88,14 +88,6 @@ inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
 	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
 }
-Vec emission(const Ray &r, double t) {
-	// Sample distance with an exponential distribution
-	//double s = sampleSegment(XORShift::frand());
-	//Vec x = r.o + r.d * s;
-	//return Vec(0.005, 0.005, 0.005) * exp(-medium.sigma_a  *(x.y * x.y)) * (1.0 / (4.0f * M_PI * medium.sigma_a));
-	return Vec();
-}
-
 Vec singleScatter(const Ray &r, double tmax) {
 	// Sample a point along the ray's extents
 	double s = sampleSegment(XORShift::frand(), medium.sigma_s, tmax);
@@ -107,7 +99,6 @@ Vec singleScatter(const Ray &r, double tmax) {
 		return spheres[lightId].e * exp(-medium.sigma_a * tLight) * (1.0 - exp(-medium.sigma_s * tmax));
 	return Vec();
 }
-
 float multipleScatter(const Ray &r, Ray *sRay, double tmax) {
 	// Sample a point along the ray's extents
 	double s = sampleSegment(XORShift::frand(), medium.sigma_s, tmax);
@@ -131,7 +122,7 @@ Vec radiance(const Ray &r, int depth) {
 	return obj.e;
 }
 */
-Vec radiance(const Ray &r, int depth){
+Vec radiance(const Ray &r, int depth) {
 	double t;                               // distance to intersection
 	int id=0;                               // id of intersected object
 	if (!intersect(r, t, id)) {
@@ -140,26 +131,25 @@ Vec radiance(const Ray &r, int depth){
 		return radiance(sRay, depth) * multipleScatter(r, &sRay, 1e20);
 	}
 	const Sphere &obj = spheres[id];        // the hit object
-	//if (obj.e.x != 0.0f || obj.e.y != 0.0f || obj.e.z != 0.0f) return emission(r, t) + obj.e * expf(-medium.sigma_a * t);
 	Vec x=r.o+r.d*t, n=(x-obj.p).norm(), nl=n.dot(r.d)<0?n:n*-1, f=obj.c;
 	double p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
 	Ray sRay;
 	float ms = multipleScatter(r, &sRay, t);
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
 	// Sample surface or volume?
-	if (XORShift::frand() < 0.5f)
+	if (XORShift::frand() <= 0.5f)
 	{
 		return radiance(sRay, depth) * ms * 2.0f;
 	}
 	f = f * expf(-medium.sigma_a * t); // Absorption
 	Vec Le = obj.e * expf(-medium.sigma_a * t);
-	if (obj.refl == DIFF){                  // Ideal DIFFUSE reflection
+	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
 		Vec w=nl, u=((fabs(w.x)>.1?Vec(0,1):Vec(1))%w).norm(), v=w%u;
 		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
-		return (emission(r, t) + Le + f.mult(radiance(Ray(x,d),depth))) * 2.0f;
+		return (Le + f.mult(radiance(Ray(x,d),depth))) * 2.0f;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
-		return (emission(r, t) + Le + f.mult(radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth))) * 2.0f;
+		return (Le + f.mult(radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth))) * 2.0f;
 	Ray reflRay(x, r.d-n*2*n.dot(r.d));     // Ideal dielectric REFRACTION
 	bool into = n.dot(nl)>0;                // Ray from outside going in?
 	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=r.d.dot(nl), cos2t;
@@ -168,7 +158,7 @@ Vec radiance(const Ray &r, int depth){
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
-	return (emission(r, t) + Le + f.mult(depth>2 ? (XORShift::frand()<P ?   // Russian roulette
+	return (Le + f.mult(depth>2 ? (XORShift::frand()<P ?   // Russian roulette
 		radiance(reflRay,depth)*RP:radiance(Ray(x,tdir),depth)*TP) :
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * 2.0f;
 }
