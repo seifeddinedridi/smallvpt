@@ -49,7 +49,7 @@ struct Sphere {
 };
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
 	Sphere(16.5,Vec(50,46.5,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(10, Vec(50,80,81.6),Vec(12,12,12),  Vec(), DIFF) //Lite
+	Sphere(10, Vec(50,80,81.6),Vec(5,5,5),  Vec(), DIFF) //Lite
 };
 const int lightId = 8;
 struct HomogeneousMedium {
@@ -155,9 +155,9 @@ Vec radiance(const Ray &r, int depth) {
 		radiance(reflRay,depth)*RP:radiance(Ray(x,tdir),depth)*TP) :
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * 2.0f;
 }
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
 	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,255.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,245.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++){                       // Loop over image rows
