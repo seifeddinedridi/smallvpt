@@ -8,3 +8,8 @@
 
 17/11/2012
 - Reimplemented single scattering, it is slow and the result is not yet satisfying...
+- Single scattering seems to be working properly now
+
+22/12/2012
+- Added multiple scattering
+- Added support for defining a medium as a sphere instead of an infinite one
