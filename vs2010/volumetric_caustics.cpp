@@ -45,15 +45,8 @@ struct Sphere {
 	}
 };
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
-	Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),DIFF),//Left
-	Sphere(1e5, Vec(-1e5+99,40.8,81.6),Vec(),Vec(.25,.25,.75),DIFF),//Right
-	Sphere(1e5, Vec(50,40.8, 1e5),     Vec(),Vec(.75,.75,.75),DIFF),//Back
-	Sphere(1e5, Vec(50,40.8,-1e5+170), Vec(),Vec(),           DIFF),//Frnt
-	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
-	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
-	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
-	Sphere(16.5,Vec(53,56.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10),  Vec(), DIFF) //Lite
+	Sphere(16.5,Vec(50,50,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
+	Sphere(2, Vec(60,70,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(250, Vec(50,50,80), Vec(), Vec(), DIFF);
 const float sigma_s = 0.008f, sigma_a = 0.005f;
@@ -112,7 +105,7 @@ Vec radiance(const Ray &r, int depth) {
 		float dist = (t > tfar ? tfar - tnear : t - tnear);
 		f = f * exp(-sigma_a * dist); // Absorption
 		Le = obj.e * exp(-sigma_a * dist);
-		if (XORShift::frand() <= 0.5f && ((n.dot(nl)>0)  || obj.refl != REFR)) // // Sample surface or volume (aside: no scattering inside glass)?
+		if (XORShift::frand() <= 0.5f && ((n.dot(nl)>0)  || obj.refl != REFR)) // // Sample surface or volume? (aside: no scattering inside glass)
 			return radiance(sRay, depth) * ms * 2.0f;
 	}
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
@@ -135,7 +128,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
 }
 int main(int argc, char *argv[]) {
-	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,285.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP

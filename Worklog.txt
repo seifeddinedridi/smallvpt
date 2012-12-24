@@ -8,3 +8,7 @@
 
 17/11/2012
 - Reimplemented single scattering, it is slow and the result is not yet satisfying...
+
+22/12/2012
+- Single scattering seems to be working properly, but I suspect if it's fully correct...
+- Added a new branch 'smallvpt-ms' to experiment with multiple scattering, the result so far is quite exciting, but I can't get the system to render volumetric caustics inside a Cornell Box, however other scattering effects are already visible.
