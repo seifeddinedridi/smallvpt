@@ -1,7 +1,7 @@
 smallvpt
 ========
 
-<b>smallvpt</b> (small volumetric path tracer) is an extension of <a href="http://www.kevinbeason.com/smallpt/">smallpt</a>, which is a tiny path tracer written by Kevin Beason in less than 100 lines of code.
+<b>smallvpt</b> is a small volumetric path tracer written in 150 lines of code, it is an extension of <a href="http://www.kevinbeason.com/smallpt/">smallpt</a>, which is a tiny path tracer written by Kevin Beason.
 
 It currently includes basic volumetric light transport supporting multiple scattering and homogeneous media. The medium is defined as a sphere surrounding the scene, with parameters <b>sigma_s</b> and <b>sigma_a</b> to control the scattering and absorption of light.
 
