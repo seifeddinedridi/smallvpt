@@ -97,16 +97,17 @@ Vec radiance(const Ray &r, int depth) {
 	Vec x=r.o+r.d*t, n=(x-obj.p).norm(), nl=n.dot(r.d)<0?n:n*-1, f=obj.c,Le=obj.e;
 	double p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
 	Ray sRay;
-	double ms = 0,scaleBy=1.0;
+	double ms=0,scaleBy=1.0;
 	if (intrsctmd) ms = multipleScatter(r, &sRay, tnear, std::min(tfar, t));
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
 	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
-		scaleBy = 2.0f;
 		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
 		f = f * absorption;
 		Le = obj.e * absorption;
-		if (XORShift::frand() <= 0.5f && ((n.dot(nl)>0)  || obj.refl != REFR)) // Sample surface or volume? (aside: no scattering inside glass)
-			return radiance(sRay, depth) * ms * 2.0f;
+		double prob_s = ms * p;
+		scaleBy = 1.0/(1.0-prob_s);
+		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR))
+			return radiance(sRay, depth) * ms * (1.0/prob_s); // Sample surface or volume? (aside: no scattering inside glass)
 	}
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);

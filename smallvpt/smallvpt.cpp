@@ -104,16 +104,17 @@ Vec radiance(const Ray &r, int depth) {
 	Vec x=r.o+r.d*t, n=(x-obj.p).norm(), nl=n.dot(r.d)<0?n:n*-1, f=obj.c,Le=obj.e;
 	double p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
 	Ray sRay;
-	double ms = 0,scaleBy=1.0;
+	double ms=0,scaleBy=1.0;
 	if (intrsctmd) ms = multipleScatter(r, &sRay, tnear, std::min(tfar, t));
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
-	if (intrsctmd && (t >= tnear)) { // sample volume if it's not behind some other object
-		scaleBy = 2.0f;
-		float dist = (t > tfar ? tfar - tnear : t - tnear);
-		f = f * exp(-sigma_a * dist); // Absorption
-		Le = obj.e * exp(-sigma_a * dist);
-		if (XORShift::frand() <= 0.5f && ((n.dot(nl)>0)  || obj.refl != REFR)) // // Sample surface or volume (aside: no scattering inside glass)?
-			return radiance(sRay, depth) * ms * 2.0f;
+	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
+		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
+		f = f * absorption;
+		Le = obj.e * absorption;
+		double prob_s = ms * p;
+		scaleBy = 1.0/(1.0-prob_s);
+		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR))
+			return radiance(sRay, depth) * ms * (1.0/prob_s); // Sample surface or volume? (aside: no scattering inside glass)
 	}
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
@@ -135,7 +136,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
 }
 int main(int argc, char *argv[]) {
-	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,285.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
