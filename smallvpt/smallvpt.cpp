@@ -57,7 +57,6 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 };
 Sphere homogeneousMedium(250, Vec(50,50,80), Vec(), Vec(), DIFF);
 const float sigma_s = 0.008f, sigma_a = 0.005f;
-const int lightId = 8;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id){
@@ -71,17 +70,6 @@ inline double sampleSegment(double epsilon, float sigma, float smax) {
 inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
 	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
-}
-inline Vec singleScatter(const Ray &r, double tmax) {
-	// Sample a point along the ray's extents
-	double s = sampleSegment(XORShift::frand(), sigma_s, tmax);
-	Vec x = r.o + r.d * s;
-	Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
-	double tLight;
-	int id = 0;
-	if (intersect(Ray(x, dir), tLight, id) && id == lightId) // make sure that the closest intersection is a light source
-		return spheres[lightId].e * exp(-sigma_a * tLight) * (1.0 - exp(-sigma_s * tmax));
-	return Vec();
 }
 inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
@@ -109,7 +97,8 @@ Vec radiance(const Ray &r, int depth) {
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
 	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
 		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
-		f = f * absorption,Le = obj.e * absorption;
+		f = f * absorption;
+		Le = obj.e * absorption;
 		double prob_s = ms * p;
 		scaleBy = 1.0/(1.0-prob_s);
 		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR))
