@@ -3,7 +3,7 @@
 #include <stdlib.h> // Make : g++ -O3 -fopenmp smallpt.cpp -o smallpt
 #include <stdio.h>  //        Remove "-fopenmp" for g++ version < 4.2
 #include <algorithm>
-#pragma warning(disable: 4244) // Disable double to float warning
+#pragma warning(disable: 4244) // Disable double to float conversion warning
 namespace XORShift { // XOR shift PRNG
 	unsigned int x = 123456789;
 	unsigned int y = 362436069;
@@ -16,7 +16,7 @@ namespace XORShift { // XOR shift PRNG
 		return (w = (w ^ (w >> 19)) ^ (t ^ (t >> 8))) * (1.0f / 4294967295.0f); 
 	}
 }
-struct Vec {        // Usage: time ./smallpt 5000 && xv image.ppm
+struct Vec { // Usage: time ./smallpt 5000 && xv image.ppm 
 	double x, y, z;                  // position, also color (r,g,b)
 	Vec(double x_=0, double y_=0, double z_=0){ x=x_; y=y_; z=z_; }
 	Vec operator+(const Vec &b) const { return Vec(x+b.x,y+b.y,z+b.z); }
@@ -48,7 +48,7 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(16.5,Vec(50,50,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
 	Sphere(2, Vec(60,70,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
 };
-Sphere homogeneousMedium(250, Vec(50,50,80), Vec(), Vec(), DIFF);
+Sphere homogeneousMedium(150, Vec(50,50,80), Vec(), Vec(), DIFF);
 const float sigma_s = 0.008f, sigma_a = 0.005f;
 const int lightId = 8;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
@@ -100,12 +100,12 @@ Vec radiance(const Ray &r, int depth) {
 	double ms = 0,scaleBy=1.0;
 	if (intrsctmd) ms = multipleScatter(r, &sRay, tnear, std::min(tfar, t));
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
-	if (intrsctmd && (t >= tnear)) { // sample volume if it's not behind some other object
+	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
 		scaleBy = 2.0f;
-		float dist = (t > tfar ? tfar - tnear : t - tnear);
-		f = f * exp(-sigma_a * dist); // Absorption
-		Le = obj.e * exp(-sigma_a * dist);
-		if (XORShift::frand() <= 0.5f && ((n.dot(nl)>0)  || obj.refl != REFR)) // // Sample surface or volume? (aside: no scattering inside glass)
+		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
+		f = f * absorption;
+		Le = obj.e * absorption;
+		if (XORShift::frand() <= 0.5f && ((n.dot(nl)>0)  || obj.refl != REFR)) // Sample surface or volume? (aside: no scattering inside glass)
 			return radiance(sRay, depth) * ms * 2.0f;
 	}
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
@@ -128,7 +128,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
 }
 int main(int argc, char *argv[]) {
-	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,285.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
