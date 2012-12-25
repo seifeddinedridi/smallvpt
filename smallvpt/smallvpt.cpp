@@ -53,10 +53,10 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
 	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
 	Sphere(16.5,Vec(53,56.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10),  Vec(), DIFF) //Lite
+	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10)*5,  Vec(), DIFF) //Lite
 };
-Sphere homogeneousMedium(250, Vec(50,50,80), Vec(), Vec(), DIFF);
-const float sigma_s = 0.008f, sigma_a = 0.005f;
+Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
+const double sigma_s = 0.002, sigma_a = 0.005;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id){
@@ -97,12 +97,12 @@ Vec radiance(const Ray &r, int depth) {
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
 	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
 		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
-		f = f * absorption;
+		if (n.dot(nl)>0 || obj.refl != REFR) f = f * absorption; // no absorption or scattering inside glass
 		Le = obj.e * absorption;
-		double prob_s = ms * p;
+		double prob_s = (n.dot(nl)<0  && obj.refl == REFR) ? 0 : ms * p;
 		scaleBy = 1.0/(1.0-prob_s);
-		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR))
-			return radiance(sRay, depth) * ms * (1.0/prob_s); // Sample surface or volume? (aside: no scattering inside glass)
+		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR)) // Sample surface or volume?
+			return radiance(sRay, depth) * ms * (1.0/prob_s);
 	}
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
@@ -125,7 +125,7 @@ Vec radiance(const Ray &r, int depth) {
 }
 int main(int argc, char *argv[]) {
 	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,285.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,270), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++) {                       // Loop over image rows

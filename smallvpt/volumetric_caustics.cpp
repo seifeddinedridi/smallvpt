@@ -46,9 +46,9 @@ struct Sphere {
 };
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
 	Sphere(16.5,Vec(50,50,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(2, Vec(60,70,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
+	Sphere(10, Vec(80,110,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
 };
-Sphere homogeneousMedium(150, Vec(50,50,80), Vec(), Vec(), DIFF);
+Sphere homogeneousMedium(50, Vec(50,50,80), Vec(), Vec(), DIFF);
 const float sigma_s = 0.008f, sigma_a = 0.005f;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
