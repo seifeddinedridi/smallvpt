@@ -5,9 +5,9 @@ smallvpt
 
 It currently includes basic volumetric light transport supporting multiple scattering and homogeneous media. The medium is defined as a sphere surrounding the scene, with parameters <b>sigma_s</b> and <b>sigma_a</b> to control the scattering and absorption of light.
 
-I apologize in advance for the noise; my computer is not fast enough to clear them, and I can't afford an overnight render due to the untolerable sound of a choking CPU :).
+Feel free to play with it as you like, if you render something cool or spot an error, please let me know ;)
 
-Feel free to play with it as you like, if you render something cool or spot an error in my code, please let me know ;)
+I apologize in advance for the noise; my computer is not fast enough to clear them, and I can't afford an overnight render due to the untolerable sound of a choking CPU :).
 
 Without further ado, here is a couple of renders showing what it is capable of:
 
