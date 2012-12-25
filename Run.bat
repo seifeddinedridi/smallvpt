@@ -4,7 +4,7 @@
 set start=%time%
 
 cd Renders
-..\Binaries\Release\smallvpt.exe 32
+..\Binaries\Release\smallvpt.exe 1024
 
 set end=%time%
 set options="tokens=1-4 delims=:."
