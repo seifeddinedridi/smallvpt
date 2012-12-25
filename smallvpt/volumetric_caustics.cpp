@@ -90,12 +90,12 @@ Vec radiance(const Ray &r, int depth) {
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);ms = ms *(1/p);} else return Vec(); //R.R.
 	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
 		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
-		f = f * absorption;
+		if (n.dot(nl)>0 || obj.refl != REFR) f = f * absorption; // no absorption or scattering inside glass
 		Le = obj.e * absorption;
-		double prob_s = ms * p;
+		double prob_s = (n.dot(nl)<0  && obj.refl == REFR) ? 0 : ms * p;
 		scaleBy = 1.0/(1.0-prob_s);
-		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR))
-			return radiance(sRay, depth) * ms * (1.0/prob_s); // Sample surface or volume? (aside: no scattering inside glass)
+		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR)) // Sample surface or volume?
+			return radiance(sRay, depth) * ms * (1.0/prob_s);
 	}
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
@@ -118,7 +118,7 @@ Vec radiance(const Ray &r, int depth) {
 }
 int main(int argc, char *argv[]) {
 	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,285.6), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,270), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++) {                       // Loop over image rows
