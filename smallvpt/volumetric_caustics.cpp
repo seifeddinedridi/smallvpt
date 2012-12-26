@@ -48,7 +48,7 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(16.5,Vec(50,50,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
 	Sphere(10, Vec(80,110,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
 };
-Sphere homogeneousMedium(50, Vec(50,50,80), Vec(), Vec(), DIFF);
+Sphere homogeneousMedium(100, Vec(50,50,80), Vec(), Vec(), DIFF);
 const float sigma_s = 0.008f, sigma_a = 0.005f;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
@@ -64,10 +64,37 @@ inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
 	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
 }
+inline Vec sampleHG(double g, double e1, double e2) {
+	double f = (1-g*g)/(1+g*e1);
+	double cost = 0.5*(1.0/g)*(1.0+g*g-f*f);
+	double xx = sqrt(1.0-cost*cost);
+	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, cost);
+}
+inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
+	//Vec coVec = (fabs(w.x) < fabs(w.y)) ? (fabs(w.x) < fabs(w.z) ? Vec(0,-w.z,w.y) : Vec(-w.y,w.x,0)) : ((fabs(w.y) < fabs(w.z)) ? Vec(-w.z,0,w.x) : Vec(-w.y,w.x,0));
+	Vec coVec = w;
+	if (fabs(w.x) <= fabs(w.y))
+		if (fabs(w.x) <= fabs(w.z))
+			coVec = Vec(0,-w.z,w.y);
+		else
+			coVec = Vec(-w.y,w.x,0);
+	else if (fabs(w.y) <= fabs(w.z))
+		coVec = Vec(-w.z,0,w.x);
+	else
+		coVec = Vec(-w.y,w.x,0);
+				
+	u.norm();
+	u = w%coVec,
+	v = u%w;
+	v.norm();
+}
 inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
-	Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
+	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
+	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
+	Vec u,v;generateOrthoBasis(u,v,r.d);
+	dir = u*dir.x+v*dir.y-r.d*dir.z;
 	if (sRay)	*sRay = Ray(x, dir);
 	return (1.0 - exp(-sigma_s * (tout - tin)));
 }
@@ -119,7 +146,7 @@ Vec radiance(const Ray &r, int depth) {
 }
 int main(int argc, char *argv[]) {
 	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,270), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,300), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++) {                       // Loop over image rows

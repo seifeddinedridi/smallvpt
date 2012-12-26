@@ -56,7 +56,7 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10)*5,  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
-const double sigma_s = 0.002, sigma_a = 0.005;
+const double sigma_s = 0.01, sigma_a = 0.005;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id){
@@ -71,10 +71,30 @@ inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
 	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
 }
+inline Vec sampleHG(double g, double e1, double e2) {
+	double f = (1-g*g)/(1+g*e1);
+	double cost = 0.5*(1.0/g)*(1.0+g*g-f*f);
+	double xx = sqrt(1.0-cost*cost);
+	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, cost);
+}
+inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
+	Vec coVec = w;
+	if (fabs(w.x) <= fabs(w.y))
+		if (fabs(w.x) <= fabs(w.z)) coVec = Vec(0,-w.z,w.y);
+		else coVec = Vec(-w.y,w.x,0);
+	else if (fabs(w.y) <= fabs(w.z)) coVec = Vec(-w.z,0,w.x);
+	else coVec = Vec(-w.y,w.x,0);
+	coVec.norm();
+	u = w%coVec,
+	v = u%w;
+}
 inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
-	Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
+	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
+	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); // Sample a direction ~ Henyey-Greenstein's phase function
+	Vec u,v;generateOrthoBasis(u,v,r.d);
+	dir = u*dir.x+v*dir.y+r.d*dir.z;
 	if (sRay)	*sRay = Ray(x, dir);
 	return (1.0 - exp(-sigma_s * (tout - tin)));
 }
@@ -84,7 +104,7 @@ Vec radiance(const Ray &r, int depth) {
 	double tnear, tfar;
 	bool intrsctmd = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
 	if (!intersect(r, t, id)) {
-		if (++depth >= 10 || !intrsctmd) return Vec();
+		if (++depth >= 20 || !intrsctmd) return Vec();
 		Ray sRay;
 		return radiance(sRay, depth) * multipleScatter(r, &sRay, tnear, tfar);
 	}
@@ -108,7 +128,7 @@ Vec radiance(const Ray &r, int depth) {
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
 		Vec w=nl, u=((fabs(w.x)>.1?Vec(0,1):Vec(1))%w).norm(), v=w%u;
-		Vec d = (u*sin(r1+M_PI_2)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
+		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
 		return (Le + f.mult(radiance(Ray(x,d),depth))) * scaleBy;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
 		return (Le + f.mult(radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth))) * scaleBy;
@@ -116,7 +136,7 @@ Vec radiance(const Ray &r, int depth) {
 	bool into = n.dot(nl)>0;                // Ray from outside going in?
 	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=r.d.dot(nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
-		return Le + f.mult(radiance(reflRay,depth));
+		return (Le + f.mult(radiance(reflRay,depth))) * scaleBy;
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
@@ -126,7 +146,7 @@ Vec radiance(const Ray &r, int depth) {
 }
 int main(int argc, char *argv[]) {
 	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,270), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,300), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++) {                       // Loop over image rows
