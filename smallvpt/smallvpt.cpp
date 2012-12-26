@@ -68,14 +68,12 @@ inline double sampleSegment(double epsilon, float sigma, float smax) {
 	return -log(1.0 - epsilon * (1.0 - exp(-sigma * smax))) / sigma;
 }
 inline Vec sampleSphere(double e1, double e2) {
-	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
-	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
+	double z = 1.0 - 2.0 * e1, sint = sqrt(1.0 - z * z);
+	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, z);
 }
 inline Vec sampleHG(double g, double e1, double e2) {
-	double f = (1-g*g)/(1+g*e1);
-	double cost = 0.5*(1.0/g)*(1.0+g*g-f*f);
-	double xx = sqrt(1.0-cost*cost);
-	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, cost);
+	double f = (1-g*g)/(1+g*e1), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
+	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
 }
 inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
 	Vec coVec = w;

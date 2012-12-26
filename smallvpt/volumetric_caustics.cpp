@@ -61,40 +61,31 @@ inline double sampleSegment(double epsilon, float sigma, float smax) {
 	return -log(1.0 - epsilon * (1.0 - exp(-sigma * smax))) / sigma;
 }
 inline Vec sampleSphere(double e1, double e2) {
-	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
-	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
+	double z = 1.0 - 2.0 * e1, sint = sqrt(1.0 - z * z);
+	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, z);
 }
 inline Vec sampleHG(double g, double e1, double e2) {
-	double f = (1-g*g)/(1+g*e1);
-	double cost = 0.5*(1.0/g)*(1.0+g*g-f*f);
-	double xx = sqrt(1.0-cost*cost);
-	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, cost);
+	double f = (1-g*g)/(1+g*e1), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
+	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
 }
 inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
-	//Vec coVec = (fabs(w.x) < fabs(w.y)) ? (fabs(w.x) < fabs(w.z) ? Vec(0,-w.z,w.y) : Vec(-w.y,w.x,0)) : ((fabs(w.y) < fabs(w.z)) ? Vec(-w.z,0,w.x) : Vec(-w.y,w.x,0));
 	Vec coVec = w;
 	if (fabs(w.x) <= fabs(w.y))
-		if (fabs(w.x) <= fabs(w.z))
-			coVec = Vec(0,-w.z,w.y);
-		else
-			coVec = Vec(-w.y,w.x,0);
-	else if (fabs(w.y) <= fabs(w.z))
-		coVec = Vec(-w.z,0,w.x);
-	else
-		coVec = Vec(-w.y,w.x,0);
-				
-	u.norm();
+		if (fabs(w.x) <= fabs(w.z)) coVec = Vec(0,-w.z,w.y);
+		else coVec = Vec(-w.y,w.x,0);
+	else if (fabs(w.y) <= fabs(w.z)) coVec = Vec(-w.z,0,w.x);
+	else coVec = Vec(-w.y,w.x,0);
+	coVec.norm();
 	u = w%coVec,
-	v = u%w;
-	v.norm();
+		v = u%w;
 }
 inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
 	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
-	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
+	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); // Sample a direction ~ Henyey-Greenstein's phase function
 	Vec u,v;generateOrthoBasis(u,v,r.d);
-	dir = u*dir.x+v*dir.y-r.d*dir.z;
+	dir = u*dir.x+v*dir.y+r.d*dir.z;
 	if (sRay)	*sRay = Ray(x, dir);
 	return (1.0 - exp(-sigma_s * (tout - tin)));
 }
