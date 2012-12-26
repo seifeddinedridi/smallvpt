@@ -69,7 +69,7 @@ inline double sampleSegment(double epsilon, float sigma, float smax) {
 }
 inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
-	return Vec(sin(2.0 * M_PI * e2 + M_PI_2) * xx, sin(2.0 * M_PI * e2) * xx, z);
+	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
 }
 inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
