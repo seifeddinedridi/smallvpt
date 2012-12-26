@@ -69,7 +69,7 @@ inline double sampleSegment(double epsilon, float sigma, float smax) {
 }
 inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, xx = sqrt(1.0 - z * z);
-	return Vec(cos(2.0 * M_PI * e2) * xx, sin(2.0 * M_PI * e2) * xx, z);
+	return Vec(sin(2.0 * M_PI * e2 + M_PI_2) * xx, sin(2.0 * M_PI * e2) * xx, z);
 }
 inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
@@ -84,7 +84,7 @@ Vec radiance(const Ray &r, int depth) {
 	double tnear, tfar;
 	bool intrsctmd = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
 	if (!intersect(r, t, id)) {
-		if (++depth >= 20 || !intrsctmd) return Vec();
+		if (++depth >= 10 || !intrsctmd) return Vec();
 		Ray sRay;
 		return radiance(sRay, depth) * multipleScatter(r, &sRay, tnear, tfar);
 	}
@@ -108,7 +108,7 @@ Vec radiance(const Ray &r, int depth) {
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
 		Vec w=nl, u=((fabs(w.x)>.1?Vec(0,1):Vec(1))%w).norm(), v=w%u;
-		Vec d = (u*cos(r1)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
+		Vec d = (u*sin(r1+M_PI_2)*r2s + v*sin(r1)*r2s + w*sqrt(1-r2)).norm();
 		return (Le + f.mult(radiance(Ray(x,d),depth))) * scaleBy;
 	} else if (obj.refl == SPEC)            // Ideal SPECULAR reflection
 		return (Le + f.mult(radiance(Ray(x,r.d-n*2*n.dot(r.d)),depth))) * scaleBy;
@@ -116,7 +116,7 @@ Vec radiance(const Ray &r, int depth) {
 	bool into = n.dot(nl)>0;                // Ray from outside going in?
 	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=r.d.dot(nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
-		return (Le + f.mult(radiance(reflRay,depth))) * scaleBy;
+		return Le + f.mult(radiance(reflRay,depth));
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
