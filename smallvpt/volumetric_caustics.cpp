@@ -46,7 +46,7 @@ struct Sphere {
 };
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
 	Sphere(16.5,Vec(50,50,81.6),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(10, Vec(80,110,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
+	Sphere(10, Vec(50,80,81.6),Vec(30,30,30),  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(100, Vec(50,50,80), Vec(), Vec(), DIFF);
 const float sigma_s = 0.008f, sigma_a = 0.005f;
@@ -65,7 +65,7 @@ inline Vec sampleSphere(double e1, double e2) {
 	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, z);
 }
 inline Vec sampleHG(double g, double e1, double e2) {
-	double f = (1-g*g)/(1+g*e1), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
+	double s=2.0*e1-1.0, f = (1-g*g)/(1+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
 	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
 }
 inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
@@ -77,14 +77,15 @@ inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
 	else coVec = Vec(-w.y,w.x,0);
 	coVec.norm();
 	u = w%coVec,
-		v = u%w;
+	v = w%u;
 }
-inline float multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
+inline double multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
-	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); // Sample a direction ~ uniform phase function
-	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); // Sample a direction ~ Henyey-Greenstein's phase function
-	Vec u,v;generateOrthoBasis(u,v,r.d);
+	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
+	Vec dir = sampleHG(-0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
+	Vec u,v;
+	generateOrthoBasis(u,v,r.d);
 	dir = u*dir.x+v*dir.y+r.d*dir.z;
 	if (sRay)	*sRay = Ray(x, dir);
 	return (1.0 - exp(-sigma_s * (tout - tin)));
@@ -136,7 +137,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
 }
 int main(int argc, char *argv[]) {
-	int w=400/*1024*/, h=400/*768*/, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,300), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
