@@ -70,15 +70,10 @@ inline double sampleSegment(double epsilon, float sigma, float smax) {
 inline Vec sampleSphere(double e1, double e2) {
 	double z = 1.0 - 2.0 * e1, sint = sqrt(1.0 - z * z);
 	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, z);
-}/*
+}
 inline Vec sampleHG(double g, double e1, double e2) {
-	double s=2.0*e1-1.0, f = (1.0-g*g)/(1.0+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
-	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
-}*/
-inline Vec sampleHG(double g, double e1, double e2) {
-	double s = 2.0 * e1 - 1.0;
-	double cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s));
-	double sint = sqrt(1.0-cost * cost);
+	//double s=2.0*e1-1.0, f = (1.0-g*g)/(1.0+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
+	double s = 2.0 * e1 - 1.0, cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s)), sint = sqrt(1.0-cost * cost);
 	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
 }
 inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
@@ -96,7 +91,7 @@ inline double multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
 	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
-	Vec dir = sampleHG(0,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
+	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
 	Vec u,v;
 	generateOrthoBasis(u,v,r.d);
 	dir = u*dir.x+v*dir.y+r.d*dir.z;
@@ -150,7 +145,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
 }
 int main(int argc, char *argv[]) {
-	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,300), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
