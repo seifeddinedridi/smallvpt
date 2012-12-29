@@ -40,7 +40,7 @@ struct Sphere {
 		Vec op = p-r.o; // Solve t^2*d.d + 2*t*(o-p).d + (o-p).(o-p)-R^2 = 0
 		double t, eps=1e-4, b=op.dot(r.d), det=b*b-op.dot(op)+rad*rad;
 		if (det<0) return 0; else det=sqrt(det);
-		if (tin && tout) {*tin=(b-det<0)?0:b-det;*tout=b+det;}
+		if (tin && tout) {*tin=(b-det<=0)?0:b-det;*tout=b+det;}
 		return (t=b-det)>eps ? t : ((t=b+det)>eps ? t : 0);
 	}
 };
@@ -73,7 +73,7 @@ inline Vec sampleSphere(double e1, double e2) {
 }
 inline Vec sampleHG(double g, double e1, double e2) {
 	//double s=2.0*e1-1.0, f = (1.0-g*g)/(1.0+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
-	double s = 2.0 * e1 - 1.0, cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s)), sint = sqrt(1.0-cost * cost);
+	double s = -2.0*e1+1.0, cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s)), sint = sqrt(1.0-cost*cost);
 	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
 }
 inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
@@ -104,7 +104,7 @@ Vec radiance(const Ray &r, int depth) {
 	double tnear, tfar;
 	bool intrsctmd = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
 	if (!intersect(r, t, id)) {
-		if (++depth >= 20 || !intrsctmd) return Vec();
+		if (++depth >= 5 || !intrsctmd) return Vec();
 		Ray sRay;
 		return radiance(sRay, depth) * multipleScatter(r, &sRay, tnear, tfar);
 	}
@@ -146,7 +146,7 @@ Vec radiance(const Ray &r, int depth) {
 }
 int main(int argc, char *argv[]) {
 	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
-	Ray cam(Vec(50,52,300), Vec(0,-0.042612,-1).norm()); // cam pos, dir
+	Ray cam(Vec(50,52,285), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
 	for (int y=0; y<h; y++) {                       // Loop over image rows
