@@ -8,11 +8,11 @@
 
 17/11/2012
 - Reimplemented single scattering, it is slow and the result is not yet satisfying...
-- Single scattering seems to be working properly now
+- Single scattering seems to be working properly now.
 
 22/12/2012
-- Added multiple scattering
-- Added support for defining a medium as a sphere instead of an infinite one
+- Added multiple scattering.
+- Added support for defining a medium as a sphere instead of an infinite one.
 
 27/12/2012
-- Experimenting with the Henyey-Greenstein's phase function. To my understanding, positive values of g generate forward scattering which results in volumetric caustics and similar effects, while a negative g will diminish the effect of scattering on the scene, and make the light source glow slightly. But  the inverse of that behavior is happening in my implementation, I can't figure out the problem yet...
+- Experimenting with the Henyey-Greenstein's phase function.
