@@ -43,7 +43,12 @@ struct Sphere {
 		if (tin && tout) {*tin=(b-det<=0)?0:b-det;*tout=b+det;}
 		return (t=b-det)>eps ? t : ((t=b+det)>eps ? t : 0);
 	}
-};
+};/*
+Sphere spheres[] = {//Scene: radius, position, emission, color, material 
+	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
+	Sphere(16.5,Vec(53,40,78),       Vec(),Vec(1,1,1)*.75, DIFF),//Glas
+	Sphere(10, Vec(80,40,61.6),Vec(2,2,2),  Vec(), DIFF) //Lite
+};*/
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
 	Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),DIFF),//Left
 	Sphere(1e5, Vec(-1e5+99,40.8,81.6),Vec(),Vec(.25,.25,.75),DIFF),//Right
@@ -56,7 +61,7 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10)*5,  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
-const double sigma_s = 0.01, sigma_a = 0.005;
+const double sigma_s = 0.01, sigma_a = 0.005, sigma_t = sigma_s+sigma_a;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id){
@@ -73,7 +78,7 @@ inline Vec sampleSphere(double e1, double e2) {
 }
 inline Vec sampleHG(double g, double e1, double e2) {
 	//double s=2.0*e1-1.0, f = (1.0-g*g)/(1.0+g*s), cost = 0.5*(1.0/g)*(1.0+g*g-f*f), sint = sqrt(1.0-cost*cost);
-	double s = -2.0*e1+1.0, cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s)), sint = sqrt(1.0-cost*cost);
+	double s = 1.0-2.0*e1, cost = (s + 2.0*g*g*g * (-1.0 + e1) * e1 + g*g*s + 2.0*g*(1.0 - e1+e1*e1))/((1.0+g*s)*(1.0+g*s)), sint = sqrt(1.0-cost*cost);
 	return Vec(cos(2.0 * M_PI * e2) * sint, sin(2.0 * M_PI * e2) * sint, cost);
 }
 inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
@@ -104,7 +109,7 @@ Vec radiance(const Ray &r, int depth) {
 	double tnear, tfar;
 	bool intrsctmd = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
 	if (!intersect(r, t, id)) {
-		if (++depth >= 5 || !intrsctmd) return Vec();
+		if (++depth > 5 || !intrsctmd) return Vec();
 		Ray sRay;
 		return radiance(sRay, depth) * multipleScatter(r, &sRay, tnear, tfar);
 	}
@@ -114,7 +119,7 @@ Vec radiance(const Ray &r, int depth) {
 	double scaleBy=1.0;
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return Vec(); //R.R.
 	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
-		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_a * dist);
+		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_t * dist);
 		if (n.dot(nl)>0 || obj.refl != REFR) f = f * absorption; // no absorption or scattering inside glass
 		Le = obj.e * absorption;
 		Ray sRay;
@@ -145,7 +150,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
 }
 int main(int argc, char *argv[]) {
-	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,285), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
