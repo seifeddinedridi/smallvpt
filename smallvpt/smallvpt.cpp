@@ -64,8 +64,8 @@ Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
 const double sigma_s = 0.01, sigma_a = 0.005, sigma_t = sigma_s+sigma_a;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
-inline bool intersect(const Ray &r, double &t, int &id){
-	double n=sizeof(spheres)/sizeof(Sphere), d, inf=t=1e20;
+inline bool intersect(const Ray &r, double &t, int &id, double tmax=1e20){
+	double n=sizeof(spheres)/sizeof(Sphere), d, inf=t=tmax;
 	for(int i=int(n);i--;) if((d=spheres[i].intersect(r))&&d<t){t=d;id=i;}
 	return t<inf;
 }
@@ -92,8 +92,8 @@ inline void generateOrthoBasis(Vec &u, Vec &v, Vec w) {
 	u = w%coVec,
 	v = w%u;
 }
-inline double multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
-	double s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
+inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s) {
+	s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
 	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
 	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
@@ -106,30 +106,30 @@ inline double multipleScatter(const Ray &r, Ray *sRay, double tin, float tout) {
 Vec radiance(const Ray &r, int depth) {
 	double t;                               // distance to intersection
 	int id=0;                               // id of intersected object
-	double tnear, tfar;
+	double tnear, tfar, scaleBy=1.0, absorption=1.0;
 	bool intrsctmd = homogeneousMedium.intersect(r, &tnear, &tfar) > 0;
-	if (!intersect(r, t, id)) {
-		if (++depth > 5 || !intrsctmd) return Vec();
+	if (intrsctmd) {
 		Ray sRay;
-		return radiance(sRay, depth) * multipleScatter(r, &sRay, tnear, tfar);
+		double s, ms = scatter(r, &sRay, tnear, tfar, s), prob_s = ms;
+		scaleBy = 1.0/(1.0-prob_s);
+		if (XORShift::frand() <= prob_s) {// Sample surface or volume?
+			if (!intersect(r, t, id, s))
+				return radiance(sRay, ++depth) * ms * (1.0/prob_s);
+			scaleBy = 1.0;
+		}
+		else
+			if (!intersect(r, t, id)) return Vec();
+		if (t >= tnear) {
+			double dist = (t > tfar ? tfar - tnear : t - tnear); 
+			absorption=exp(-sigma_t * dist);
+		}
 	}
 	const Sphere &obj = spheres[id];        // the hit object
 	Vec x=r.o+r.d*t, n=(x-obj.p).norm(), nl=n.dot(r.d)<0?n:n*-1, f=obj.c,Le=obj.e;
 	double p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
-	double scaleBy=1.0;
 	if (++depth>5) if (XORShift::frand()<p) {f=f*(1/p);} else return Vec(); //R.R.
-	if (intrsctmd && (t >= tnear)) { // Sample volume if it's not behind an object
-		double dist = (t > tfar ? tfar - tnear : t - tnear), absorption=exp(-sigma_t * dist);
-		if (n.dot(nl)>0 || obj.refl != REFR) f = f * absorption; // no absorption or scattering inside glass
-		Le = obj.e * absorption;
-		Ray sRay;
-		double ms = multipleScatter(r, &sRay, tnear, std::min(tfar, t));
-		double prob_s = (n.dot(nl)<0  && obj.refl == REFR) ? 0 : ms;
-		if (depth>5) ms/=p;
-		scaleBy = 1.0/(1.0-prob_s);
-		if (XORShift::frand() <= prob_s && ((n.dot(nl)>0)  || obj.refl != REFR)) // Sample surface or volume?
-			return radiance(sRay, depth) * ms * (1.0/prob_s);
-	}
+	if (n.dot(nl)>0 || obj.refl != REFR) {f = f * absorption; Le = obj.e * absorption;}// no absorption inside glass
+	else scaleBy=1.0;
 	if (obj.refl == DIFF) {                  // Ideal DIFFUSE reflection
 		double r1=2*M_PI*XORShift::frand(), r2=XORShift::frand(), r2s=sqrt(r2);
 		Vec w=nl, u=((fabs(w.x)>.1?Vec(0,1):Vec(1))%w).norm(), v=w%u;
@@ -141,13 +141,13 @@ Vec radiance(const Ray &r, int depth) {
 	bool into = n.dot(nl)>0;                // Ray from outside going in?
 	double nc=1, nt=1.5, nnt=into?nc/nt:nt/nc, ddn=r.d.dot(nl), cos2t;
 	if ((cos2t=1-nnt*nnt*(1-ddn*ddn))<0)    // Total internal reflection
-		return (Le + f.mult(radiance(reflRay,depth))) * scaleBy;
+		return (Le + f.mult(radiance(reflRay,depth)));
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
 	return (Le + f.mult(depth>2 ? (XORShift::frand()<P ?   // Russian roulette
 		radiance(reflRay,depth)*RP:radiance(Ray(x,tdir),depth)*TP) :
-	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr)) * scaleBy;
+	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr));
 }
 int main(int argc, char *argv[]) {
 	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
