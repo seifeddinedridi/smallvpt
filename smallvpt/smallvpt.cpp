@@ -51,8 +51,9 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(1e5, Vec(50,40.8,-1e5+170), Vec(),Vec(),           DIFF),//Frnt
 	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
 	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
-	Sphere(16.5,Vec(30,30,78),		   Vec(),Vec(1,1,1)*.75, DIFF),//Glas
-	Sphere(10, Vec(20,10,81.6),Vec(10,10,10),  Vec(), DIFF) //Lite
+	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
+	Sphere(16.5,Vec(53,56.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
+	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10)*5,  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
 const double sigma_s = 0.01, sigma_a = 0.005, sigma_t = sigma_s+sigma_a;
