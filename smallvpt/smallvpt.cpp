@@ -43,12 +43,7 @@ struct Sphere {
 		if (tin && tout) {*tin=(b-det<=0)?0:b-det;*tout=b+det;}
 		return (t=b-det)>eps ? t : ((t=b+det)>eps ? t : 0);
 	}
-};/*
-Sphere spheres[] = {//Scene: radius, position, emission, color, material 
-	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
-	Sphere(16.5,Vec(53,40,78),       Vec(),Vec(1,1,1)*.75, DIFF),//Glas
-	Sphere(10, Vec(80,40,61.6),Vec(2,2,2),  Vec(), DIFF) //Lite
-};*/
+};
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
 	Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),DIFF),//Left
 	Sphere(1e5, Vec(-1e5+99,40.8,81.6),Vec(),Vec(.25,.25,.75),DIFF),//Right
@@ -56,9 +51,8 @@ Sphere spheres[] = {//Scene: radius, position, emission, color, material
 	Sphere(1e5, Vec(50,40.8,-1e5+170), Vec(),Vec(),           DIFF),//Frnt
 	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
 	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
-	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
-	Sphere(16.5,Vec(53,56.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10)*5,  Vec(), DIFF) //Lite
+	Sphere(16.5,Vec(30,30,78),		   Vec(),Vec(1,1,1)*.75, DIFF),//Glas
+	Sphere(10, Vec(20,10,81.6),Vec(10,10,10),  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
 const double sigma_s = 0.01, sigma_a = 0.005, sigma_t = sigma_s+sigma_a;
@@ -96,7 +90,7 @@ inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s
 	s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
 	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
-	Vec dir = sampleHG(0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
+	Vec dir = sampleHG(0.0,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
 	Vec u,v;
 	generateOrthoBasis(u,v,r.d);
 	dir = u*dir.x+v*dir.y+r.d*dir.z;
@@ -113,7 +107,7 @@ Vec radiance(const Ray &r, int depth) {
 		double s, ms = scatter(r, &sRay, tnear, tfar, s), prob_s = ms;
 		scaleBy = 1.0/(1.0-prob_s);
 		if (XORShift::frand() <= prob_s) {// Sample surface or volume?
-			if (!intersect(r, t, id, s))
+			if (!intersect(r, t, id, tnear + s))
 				return radiance(sRay, ++depth) * ms * (1.0/prob_s);
 			scaleBy = 1.0;
 		}
@@ -124,6 +118,8 @@ Vec radiance(const Ray &r, int depth) {
 			absorption=exp(-sigma_t * dist);
 		}
 	}
+	else
+		if (!intersect(r, t, id)) return Vec();
 	const Sphere &obj = spheres[id];        // the hit object
 	Vec x=r.o+r.d*t, n=(x-obj.p).norm(), nl=n.dot(r.d)<0?n:n*-1, f=obj.c,Le=obj.e;
 	double p = f.x>f.y && f.x>f.z ? f.x : f.y>f.z ? f.y : f.z; // max refl
