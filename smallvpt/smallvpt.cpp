@@ -137,9 +137,9 @@ Vec radiance(const Ray &r, int depth) {
 	Vec tdir = (r.d*nnt - n*((into?1:-1)*(ddn*nnt+sqrt(cos2t)))).norm();
 	double a=nt-nc, b=nt+nc, R0=a*a/(b*b), c = 1-(into?-ddn:tdir.dot(n));
 	double Re=R0+(1-R0)*c*c*c*c*c,Tr=1-Re,P=.25+.5*Re,RP=Re/P,TP=Tr/(1-P);
-	return (Le + f.mult(depth>2 ? (XORShift::frand()<P ?   // Russian roulette
-		radiance(reflRay,depth)*RP:radiance(Ray(x,tdir),depth)*TP) :
-	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr));
+		return (Le + (depth>2 ? (XORShift::frand()<P ?   // Russian roulette
+		radiance(reflRay,depth)*RP:f.mult(radiance(Ray(x,tdir),depth)*TP)) :
+	radiance(reflRay,depth)*Re+f.mult(radiance(Ray(x,tdir),depth)*Tr)))*scaleBy;
 }
 int main(int argc, char *argv[]) {
 	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
