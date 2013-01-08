@@ -45,18 +45,13 @@ struct Sphere {
 	}
 };
 Sphere spheres[] = {//Scene: radius, position, emission, color, material 
-	Sphere(1e5, Vec( 1e5+1,40.8,81.6), Vec(),Vec(.75,.25,.25),DIFF),//Left
-	Sphere(1e5, Vec(-1e5+99,40.8,81.6),Vec(),Vec(.25,.25,.75),DIFF),//Right
-	Sphere(1e5, Vec(50,40.8, 1e5),     Vec(),Vec(.75,.75,.75),DIFF),//Back
-	Sphere(1e5, Vec(50,40.8,-1e5+170), Vec(),Vec(),           DIFF),//Frnt
-	Sphere(1e5, Vec(50, 1e5, 81.6),    Vec(),Vec(.75,.75,.75),DIFF),//Botm
-	Sphere(1e5, Vec(50,-1e5+81.6,81.6),Vec(),Vec(.75,.75,.75),DIFF),//Top
-	Sphere(16.5,Vec(27,16.5,47),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
-	Sphere(16.5,Vec(53,56.5,78),       Vec(),Vec(1,1,1)*.75, REFR),//Glas
-	Sphere(600, Vec(50,681.6-0.03,81.6),Vec(10,10,10)*5,  Vec(), DIFF) //Lite
+	Sphere(26.5,Vec(27,18.5,78),       Vec(),Vec(1,1,1)*.75, SPEC),//Mirr
+	Sphere(12,Vec(70,43,78),       Vec(),Vec(0.27,0.8,0.8), REFR),//Glas
+	Sphere(8, Vec(55,87,78),Vec(),  Vec(1,1,1)*.75, DIFF), //Lite
+	Sphere(4, Vec(55,80,78),Vec(10,10,10),  Vec(), DIFF) //Lite
 };
 Sphere homogeneousMedium(300, Vec(50,50,80), Vec(), Vec(), DIFF);
-const double sigma_s = 0.01, sigma_a = 0.005, sigma_t = sigma_s+sigma_a;
+const double sigma_s = 0.009, sigma_a = 0.006, sigma_t = sigma_s+sigma_a;
 inline double clamp(double x){ return x<0 ? 0 : x>1 ? 1 : x; }
 inline int toInt(double x){ return int(pow(clamp(x),1/2.2)*255+.5); }
 inline bool intersect(const Ray &r, double &t, int &id, double tmax=1e20){
@@ -91,7 +86,7 @@ inline double scatter(const Ray &r, Ray *sRay, double tin, float tout, double &s
 	s = sampleSegment(XORShift::frand(), sigma_s, tout - tin);
 	Vec x = r.o + r.d *tin + r.d * s;
 	//Vec dir = sampleSphere(XORShift::frand(), XORShift::frand()); //Sample a direction ~ uniform phase function
-	Vec dir = sampleHG(0.0,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
+	Vec dir = sampleHG(-0.5,XORShift::frand(), XORShift::frand()); //Sample a direction ~ Henyey-Greenstein's phase function
 	Vec u,v;
 	generateOrthoBasis(u,v,r.d);
 	dir = u*dir.x+v*dir.y+r.d*dir.z;
@@ -147,7 +142,7 @@ Vec radiance(const Ray &r, int depth) {
 	radiance(reflRay,depth)*Re+radiance(Ray(x,tdir),depth)*Tr));
 }
 int main(int argc, char *argv[]) {
-	int w=400, h=400, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
+	int w=1024, h=768, samps = argc==2 ? atoi(argv[1])/4 : 1; // # samples
 	Ray cam(Vec(50,52,285), Vec(0,-0.042612,-1).norm()); // cam pos, dir
 	Vec cx=Vec(w*.5135/h), cy=(cx%cam.d).norm()*.5135, r, *c=new Vec[w*h];
 #pragma omp parallel for schedule(dynamic, 1) private(r)       // OpenMP
