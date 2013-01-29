@@ -7,9 +7,9 @@ It currently includes basic volumetric light transport supporting multiple scatt
 
 Feel free to play with it as you like, if you render something cool or spot an error, please let me know ;)
 
-I apologize in advance for the noise; my computer is not fast enough to clear them, and I can't afford an overnight render due to the untolerable sound of a choking CPU :).
+I apologize in advance for the noise; my computer is not fast enough to clear it, and I can't afford an overnight render due to the untolerable sound of a choking CPU :)
 
-Without further ado, here is a couple of renders showing what it is capable of:
+Without further ado, here are a couple of renders showing what it is capable of:
 
 ![My image](https://raw.github.com/D-POWER/smallvpt/master/Renders/Foggy%20Cornell%20Box%20-%20%5B10000spp%5D.png)
 
